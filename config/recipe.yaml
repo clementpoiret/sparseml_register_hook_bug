@@ -1,0 +1,46 @@
+# Epoch and Learning-Rate variables
+num_epochs: 128
+init_lr: 0.0005
+
+training_modifiers:
+  - !EpochRangeModifier
+    start_epoch: 0.0
+    end_epoch: eval(num_epochs)
+  - !LearningRateFunctionModifier
+    start_epoch: 0.0
+    end_epoch: eval(0.1 * num_epochs)
+    init_lr: 0.0
+    final_lr: eval(init_lr)
+    lr_func: linear
+  - !LearningRateFunctionModifier
+    start_epoch: eval(0.1 * num_epochs)
+    end_epoch: eval(num_epochs)
+    init_lr: eval(init_lr)
+    final_lr: 0.0
+    lr_func: cosine
+  
+# transfer_learning_modifiers:
+  - !TrainableParamsModifier
+    start_epoch: 0.0
+    end_epoch: eval(num_epochs)
+    trainable: false
+    params: __ALL__
+  - !TrainableParamsModifier
+    start_epoch: 0.0
+    trainable: true
+    params_strict: true
+    params: ['re:backbone.classifier*']
+
+# Phase 1 Sparse Transfer Learning / Recovery
+sparse_transfer_learning_modifiers:
+  - !ConstantPruningModifier
+      start_epoch: 0.0
+      params: __ALL__
+
+# Phase 2 Apply quantization
+sparse_quantized_transfer_learning_modifiers:
+  - !QuantizationModifier
+    start_epoch: eval(num_epochs - 3)
+    ignore: ['classifier', 'AdaptiveAvgPool2d']
+    disable_quantization_observer_epoch: eval(num_epochs - 0.1) 
+    freeze_bn_stats_epoch: eval(num_epochs - 0.1)
